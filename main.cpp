@@ -114,7 +114,7 @@ static void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 
 void rendertext(){
     if(guitext){
-        textrenderer::render("test",0,0);
+        textRenderer("test",0,0);
     }
 }
 
@@ -194,9 +194,30 @@ int main(void)
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
 
+    //textrenderer
+    glGenVertexArrays(1, &textVAO);
+    glGenBuffers(1, &textVBO);
+    glGenBuffers(1, &textEBO);
+    glBindVertexArray(textVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, textVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), quadVertices, GL_STATIC_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, textEBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(quadIndices), quadIndices, GL_STATIC_DRAW);
+    // position attribute
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    // color attribute
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+    // texture coord attribute
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+    glEnableVertexAttribArray(2);
+
     // load textures
     unsigned int diffuseMap=loadTexture("container2.png");
     unsigned int specularMap=loadTexture("container2_specular.png");
+
+    fontTexture=loadTexture("../font/bitmapfont.bmp");
 
     glBindBuffer(GL_ARRAY_BUFFER,0);
     glBindVertexArray(0);
@@ -325,7 +346,7 @@ int main(void)
             glDrawArrays(GL_TRIANGLES, 0, 36);
         }
 
-        //rendertext();
+        rendertext();
  
         glfwSwapBuffers(window);
         glfwPollEvents();

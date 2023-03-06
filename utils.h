@@ -51,7 +51,9 @@ static inline const char *getShaderSource(const char *fileName)
 }
 
 unsigned int loadTexture(char const * name)
-{
+{   
+    stbi_set_flip_vertically_on_load(true);  
+
     std::string texpath=PATH_TO_TEXTURES;
     texpath+=name;
 
