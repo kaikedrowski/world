@@ -50,7 +50,7 @@ static inline const char *getShaderSource(const char *fileName)
     return (const char *)shaderSource;
 }
 
-unsigned int loadTexture(char const * name)
+unsigned int loadTexture(char const * name,GLint TEXTURE_MIN_FILTER,GLint TEXTURE_MAG_FILTER)
 {   
     stbi_set_flip_vertically_on_load(true);  
 
@@ -78,8 +78,8 @@ unsigned int loadTexture(char const * name)
 
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, TEXTURE_MIN_FILTER);//GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, TEXTURE_MAG_FILTER);//GL_LINEAR);
 
         stbi_image_free(data);
     }

@@ -112,9 +112,9 @@ static void framebuffer_size_callback(GLFWwindow* window, int width, int height)
     glViewport(0, 0, width, height);
 }
 
-void rendertext(){
+void rendertext(GLFWwindow* window){
     if(guitext){
-        textRenderer("test",0,0);
+        textRenderer("test",0.0,0.0,window);
     }
 }
 
@@ -214,10 +214,10 @@ int main(void)
     glEnableVertexAttribArray(2);
 
     // load textures
-    unsigned int diffuseMap=loadTexture("container2.png");
-    unsigned int specularMap=loadTexture("container2_specular.png");
+    unsigned int diffuseMap=loadTexture("container2.png",GL_LINEAR_MIPMAP_LINEAR,GL_LINEAR);
+    unsigned int specularMap=loadTexture("container2_specular.png",GL_LINEAR_MIPMAP_LINEAR,GL_LINEAR);
 
-    fontTexture=loadTexture("../font/bitmapfont.bmp");
+    fontTexture=loadTexture("../font/bitmapfont.bmp",GL_NEAREST_MIPMAP_NEAREST,GL_NEAREST);
 
     glBindBuffer(GL_ARRAY_BUFFER,0);
     glBindVertexArray(0);
@@ -346,7 +346,7 @@ int main(void)
             glDrawArrays(GL_TRIANGLES, 0, 36);
         }
 
-        rendertext();
+        rendertext(window);
  
         glfwSwapBuffers(window);
         glfwPollEvents();

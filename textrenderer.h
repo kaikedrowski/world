@@ -2,11 +2,13 @@
 #define TEXTRENDERER_H
 
 #include <glad/glad.h>
+#define GLFW_INCLUDE_NONE
+#include <GLFW/glfw3.h>
 
 #include "utils.h"
 #include "shader.h"
 
-const int fontSize=10;
+const int fontSize=32;
 
 GLuint textVAO,textVBO,textEBO;
 unsigned int fontTexture;
@@ -15,12 +17,14 @@ const float texCoordScale=0.125;
 
 float posX=0.0,posY=0.0;
 
+int width, height;
+
 float quadVertices[] = {
     // positions          // colors           // texture coords
-     0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   texCoordScale+posX, texCoordScale+posY,   // top right
-     0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   texCoordScale+posX, 0.0f+posY,   // bottom right
-    -0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f+posX,          0.0f+posY,   // bottom left
-    -0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f+posX,          texCoordScale+posY    // top left 
+     1.0f,  1.0f, 0.0f,   1.0f, 0.0f, 0.0f,   texCoordScale+posX, texCoordScale+posY,   // top right
+     1.0f, -1.0f, 0.0f,   0.0f, 1.0f, 0.0f,   texCoordScale+posX, 0.0f+posY,   // bottom right
+    -1.0f, -1.0f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f+posX,          0.0f+posY,   // bottom left
+    -1.0f,  1.0f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f+posX,          texCoordScale+posY    // top left 
 };
 unsigned int quadIndices[] = {  
     0, 1, 3, // first triangle
@@ -291,43 +295,49 @@ void textCoordinates(char glyph) {
     }
 }
 
-inline static void textRenderer(const char* text, int x, int y){
-    quadVertices[6]=texCoordScale+posX;
-    quadVertices[7]=texCoordScale+posY;
-    quadVertices[14]=texCoordScale+posX;
-    quadVertices[15]=0.0f+posY;
-    quadVertices[22]=0.0f+posX;
-    quadVertices[23]=0.0f+posY;
-    quadVertices[30]=0.0f+posX;
-    quadVertices[31]=texCoordScale+posY;
-    textCoordinates('q');
+inline static void textRenderer(const char* text, float x, float y, GLFWwindow* window){   
+    Shader program("2dtext.vert","2dtext.frag");
 
-    //textrenderer
-    glGenVertexArrays(1, &textVAO);
-    glGenBuffers(1, &textVBO);
-    glGenBuffers(1, &textEBO);
-    glBindVertexArray(textVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, textVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), quadVertices, GL_STATIC_DRAW);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, textEBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(quadIndices), quadIndices, GL_STATIC_DRAW);
-    // position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    // color attribute
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-    // texture coord attribute
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-    glEnableVertexAttribArray(2);
+    glfwGetFramebufferSize(window, &width, &height);
 
-    Shader program("2d.vert","2d.frag");
+    float fwidth=width,fheight=height;Logger(std::to_string(fheight/fwidth));
+
+    for(int i=0;i<strlen(text);i++){
+        //set glyph texcoords
+        char glyph=text[i];
+        textCoordinates(glyph);
+        quadVertices[6]=texCoordScale+posX;
+        quadVertices[7]=texCoordScale+posY;
+        quadVertices[14]=texCoordScale+posX;
+        quadVertices[15]=0.0f+posY;
+        quadVertices[22]=0.0f+posX;
+        quadVertices[23]=0.0f+posY;
+        quadVertices[30]=0.0f+posX;
+        quadVertices[31]=texCoordScale+posY;
+
+        float ratio=fheight/fwidth;
+        float scale=fontSize/fheight;
+        float dist=2*(fontSize*i)/fwidth;
+
+        quadVertices[0]=ratio*scale+dist;
+        quadVertices[1]=1.0*scale;
+        quadVertices[8]=ratio*scale+dist;
+        quadVertices[9]=-1.0*scale;
+        quadVertices[16]=-ratio*scale+dist;
+        quadVertices[17]=-1.0*scale;
+        quadVertices[24]=-ratio*scale+dist;
+        quadVertices[25]=1.0*scale;
     
-    program.use();
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, fontTexture);
-    glBindVertexArray(textVAO);
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        //update quadVertices in the VBO
+        glBindBuffer(GL_ARRAY_BUFFER, textVBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), quadVertices, GL_STATIC_DRAW);
+        
+        program.use();
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, fontTexture);
+        glBindVertexArray(textVAO);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+    }
 }
 
 #endif /* TEXTRENDERER_H */
