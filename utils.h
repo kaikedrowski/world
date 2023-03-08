@@ -15,7 +15,6 @@ float fps=0.;
 
 std::chrono::system_clock::time_point a = std::chrono::system_clock::now();
 std::chrono::system_clock::time_point b = std::chrono::system_clock::now();
-std::chrono::system_clock::time_point c = std::chrono::system_clock::now();
 
 static inline float radians(float deg) {
     return 0.0174533f*deg;
@@ -92,14 +91,9 @@ unsigned int loadTexture(char const * name,GLint TEXTURE_MIN_FILTER,GLint TEXTUR
     return textureID;
 }
 
+int count=0;
 static inline void loopTimer(){
     a = std::chrono::system_clock::now();
-
-    std::chrono::duration<double, std::milli> delta_time = a - c;
-    if(delta_time.count()!=0)
-        fps=1000.0/delta_time.count();
-
-    c = std::chrono::system_clock::now();
 
     std::chrono::duration<double, std::milli> work_time = a - b;
 
@@ -112,6 +106,12 @@ static inline void loopTimer(){
 
     b = std::chrono::system_clock::now();
     std::chrono::duration<double, std::milli> sleep_time = b - a;
+
+    count++;
+    if(count==60){
+        fps=1000/(work_time+sleep_time).count();
+        count=0;
+    }
 }
 
 #endif /* UTILS_H */

@@ -114,7 +114,8 @@ static void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 
 void rendertext(GLFWwindow* window){
     if(guitext){
-        textRenderer("test",0.0,0.0,window);
+        std::string fpstring="FPS "+std::to_string(fps).substr(0,4);
+        textRenderer(fpstring.c_str(),32.0,-32.0,window,32,1.0,1.0,1.0,topLeft);
     }
 }
 
@@ -235,6 +236,8 @@ int main(void)
 
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        glEnable(GL_DEPTH_TEST);
 
         mainShader.use();
         mainShader.setVec3("viewPos", cameraPos);

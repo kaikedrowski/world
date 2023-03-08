@@ -8,23 +8,25 @@
 #include "utils.h"
 #include "shader.h"
 
-const int fontSize=32;
+enum originPos{bottomLeft,topLeft,bottomRight,topRight,center};
+
+const int fontSize=0;
 
 GLuint textVAO,textVBO,textEBO;
 unsigned int fontTexture;
 
 const float texCoordScale=0.125;
 
-float posX=0.0,posY=0.0;
+float texposX=0.0,texposY=0.0;
 
 int width, height;
 
 float quadVertices[] = {
     // positions          // colors           // texture coords
-     1.0f,  1.0f, 0.0f,   1.0f, 0.0f, 0.0f,   texCoordScale+posX, texCoordScale+posY,   // top right
-     1.0f, -1.0f, 0.0f,   0.0f, 1.0f, 0.0f,   texCoordScale+posX, 0.0f+posY,   // bottom right
-    -1.0f, -1.0f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f+posX,          0.0f+posY,   // bottom left
-    -1.0f,  1.0f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f+posX,          texCoordScale+posY    // top left 
+     1.0f,  1.0f, 0.0f,   1.0f, 0.0f, 0.0f,   texCoordScale+texposX, texCoordScale+texposY,   // top right
+     1.0f, -1.0f, 0.0f,   0.0f, 1.0f, 0.0f,   texCoordScale+texposX, 0.0f+texposY,   // bottom right
+    -1.0f, -1.0f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f+texposX,          0.0f+texposY,   // bottom left
+    -1.0f,  1.0f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f+texposX,          texCoordScale+texposY    // top left 
 };
 unsigned int quadIndices[] = {  
     0, 1, 3, // first triangle
@@ -37,296 +39,331 @@ void textCoordinates(char glyph) {
             Logger("Invalid glyph");
             break;
         case ' ':
-            posX=0.0;
-            posY=0.125*7;
+            texposX=0.0;
+            texposY=0.125*7;
             break;
         case '!':
-            posX=0.125;
-            posY=0.125*7;
+            texposX=0.125;
+            texposY=0.125*7;
             break;
         case '\"':
-            posX=0.125*2;
-            posY=0.125*7;
+            texposX=0.125*2;
+            texposY=0.125*7;
             break;
         case '#':
-            posX=0.125*3;
-            posY=0.125*7;
+            texposX=0.125*3;
+            texposY=0.125*7;
             break;
         case '$':
-            posX=0.125*4;
-            posY=0.125*7;
+            texposX=0.125*4;
+            texposY=0.125*7;
             break;
         case '%':
-            posX=0.125*5;
-            posY=0.125*7;
+            texposX=0.125*5;
+            texposY=0.125*7;
             break;
         case '&':
-            posX=0.125*6;
-            posY=0.125*7;
+            texposX=0.125*6;
+            texposY=0.125*7;
             break;
         case '\'':
-            posX=0.125*7;
-            posY=0.125*7;
+            texposX=0.125*7;
+            texposY=0.125*7;
             break;
         case '(':
-            posX=0.0;
-            posY=0.125*6;
+            texposX=0.0;
+            texposY=0.125*6;
             break;
         case ')':
-            posX=0.125;
-            posY=0.125*6;
+            texposX=0.125;
+            texposY=0.125*6;
             break;
         case '*':
-            posX=0.125*2;
-            posY=0.125*6;
+            texposX=0.125*2;
+            texposY=0.125*6;
             break;
         case '+':
-            posX=0.125*3;
-            posY=0.125*6;
+            texposX=0.125*3;
+            texposY=0.125*6;
             break;
         case ',':
-            posX=0.125*4;
-            posY=0.125*6;
+            texposX=0.125*4;
+            texposY=0.125*6;
             break;
         case '-':
-            posX=0.125*5;
-            posY=0.125*6;
+            texposX=0.125*5;
+            texposY=0.125*6;
             break;
         case '.':
-            posX=0.125*6;
-            posY=0.125*6;
+            texposX=0.125*6;
+            texposY=0.125*6;
             break;
         case '/':
-            posX=0.125*7;
-            posY=0.125*6;
+            texposX=0.125*7;
+            texposY=0.125*6;
             break;
         case '0':
-            posX=0.0;
-            posY=0.125*5;
+            texposX=0.0;
+            texposY=0.125*5;
             break;
         case '1':
-            posX=0.125;
-            posY=0.125*5;
+            texposX=0.125;
+            texposY=0.125*5;
             break;
         case '2':
-            posX=0.125*2;
-            posY=0.125*5;
+            texposX=0.125*2;
+            texposY=0.125*5;
             break;
         case '3':
-            posX=0.125*3;
-            posY=0.125*5;
+            texposX=0.125*3;
+            texposY=0.125*5;
             break;
         case '4':
-            posX=0.125*4;
-            posY=0.125*5;
+            texposX=0.125*4;
+            texposY=0.125*5;
             break;
         case '5':
-            posX=0.125*5;
-            posY=0.125*5;
+            texposX=0.125*5;
+            texposY=0.125*5;
             break;
         case '6':
-            posX=0.125*6;
-            posY=0.125*5;
+            texposX=0.125*6;
+            texposY=0.125*5;
             break;
         case '7':
-            posX=0.125*7;
-            posY=0.125*5;
+            texposX=0.125*7;
+            texposY=0.125*5;
             break;
         case '8':
-            posX=0.0;
-            posY=0.125*4;
+            texposX=0.0;
+            texposY=0.125*4;
             break;
         case '9':
-            posX=0.125;
-            posY=0.125*4;
+            texposX=0.125;
+            texposY=0.125*4;
             break;
         case ':':
-            posX=0.125*2;
-            posY=0.125*4;
+            texposX=0.125*2;
+            texposY=0.125*4;
             break;
         case ';':
-            posX=0.125*3;
-            posY=0.125*4;
+            texposX=0.125*3;
+            texposY=0.125*4;
             break;
         case '<':
-            posX=0.125*4;
-            posY=0.125*4;
+            texposX=0.125*4;
+            texposY=0.125*4;
             break;
         case '=':
-            posX=0.125*5;
-            posY=0.125*4;
+            texposX=0.125*5;
+            texposY=0.125*4;
             break;
         case '>':
-            posX=0.125*6;
-            posY=0.125*4;
+            texposX=0.125*6;
+            texposY=0.125*4;
             break;
         case '?':
-            posX=0.125*7;
-            posY=0.125*4;
+            texposX=0.125*7;
+            texposY=0.125*4;
             break;
         case '@':
-            posX=0.0;
-            posY=0.125*3;
+            texposX=0.0;
+            texposY=0.125*3;
             break;
         case 'a':case 'A':
-            posX=0.125;
-            posY=0.125*3;
+            texposX=0.125;
+            texposY=0.125*3;
             break;
         case 'b':case 'B':
-            posX=0.125*2;
-            posY=0.125*3;
+            texposX=0.125*2;
+            texposY=0.125*3;
             break;
         case 'c':case 'C':
-            posX=0.125*3;
-            posY=0.125*3;
+            texposX=0.125*3;
+            texposY=0.125*3;
             break;
         case 'd':case 'D':
-            posX=0.125*4;
-            posY=0.125*3;
+            texposX=0.125*4;
+            texposY=0.125*3;
             break;
         case 'e':case 'E':
-            posX=0.125*5;
-            posY=0.125*3;
+            texposX=0.125*5;
+            texposY=0.125*3;
             break;
         case 'f':case 'F':
-            posX=0.125*6;
-            posY=0.125*3;
+            texposX=0.125*6;
+            texposY=0.125*3;
             break;
         case 'g':case 'G':
-            posX=0.125*7;
-            posY=0.125*3;
+            texposX=0.125*7;
+            texposY=0.125*3;
             break;
         case 'h':case 'H':
-            posX=0.0;
-            posY=0.125*2;
+            texposX=0.0;
+            texposY=0.125*2;
             break;
         case 'i':case 'I':
-            posX=0.125;
-            posY=0.125*2;
+            texposX=0.125;
+            texposY=0.125*2;
             break;
         case 'j':case 'J':
-            posX=0.125*2;
-            posY=0.125*2;
+            texposX=0.125*2;
+            texposY=0.125*2;
             break;
         case 'k':case 'K':
-            posX=0.125*3;
-            posY=0.125*2;
+            texposX=0.125*3;
+            texposY=0.125*2;
             break;
         case 'l':case 'L':
-            posX=0.125*4;
-            posY=0.125*2;
+            texposX=0.125*4;
+            texposY=0.125*2;
             break;
         case 'm':case 'M':
-            posX=0.125*5;
-            posY=0.125*2;
+            texposX=0.125*5;
+            texposY=0.125*2;
             break;
         case 'n':case 'N':
-            posX=0.125*6;
-            posY=0.125*2;
+            texposX=0.125*6;
+            texposY=0.125*2;
             break;
         case 'o':case 'O':
-            posX=0.125*7;
-            posY=0.125*2;
+            texposX=0.125*7;
+            texposY=0.125*2;
             break;
         case 'p':case 'P':
-            posX=0.0;
-            posY=0.125;
+            texposX=0.0;
+            texposY=0.125;
             break;
         case 'q':case 'Q':
-            posX=0.125;
-            posY=0.125;
+            texposX=0.125;
+            texposY=0.125;
             break;
         case 'r':case 'R':
-            posX=0.125*2;
-            posY=0.125;
+            texposX=0.125*2;
+            texposY=0.125;
             break;
         case 's':case 'S':
-            posX=0.125*3;
-            posY=0.125;
+            texposX=0.125*3;
+            texposY=0.125;
             break;
         case 't':case 'T':
-            posX=0.125*4;
-            posY=0.125;
+            texposX=0.125*4;
+            texposY=0.125;
             break;
         case 'u':case 'U':
-            posX=0.125*5;
-            posY=0.125;
+            texposX=0.125*5;
+            texposY=0.125;
             break;
         case 'v':case 'V':
-            posX=0.125*6;
-            posY=0.125;
+            texposX=0.125*6;
+            texposY=0.125;
             break;
         case 'w':case 'W':
-            posX=0.125*7;
-            posY=0.125;
+            texposX=0.125*7;
+            texposY=0.125;
             break;
         case 'x':case 'X':
-            posX=0.0;
-            posY=0.0;
+            texposX=0.0;
+            texposY=0.0;
             break;
         case 'y':case 'Y':
-            posX=0.125;
-            posY=0.0;
+            texposX=0.125;
+            texposY=0.0;
             break;
         case 'z':case 'Z':
-            posX=0.125*2;
-            posY=0.0;
+            texposX=0.125*2;
+            texposY=0.0;
             break;
         case '[':
-            posX=0.125*3;
-            posY=0.0;
+            texposX=0.125*3;
+            texposY=0.0;
             break;
         case '\\':
-            posX=0.125*4;
-            posY=0.0;
+            texposX=0.125*4;
+            texposY=0.0;
             break;
         case ']':
-            posX=0.125*5;
-            posY=0.0;
+            texposX=0.125*5;
+            texposY=0.0;
             break;
         case '^':
-            posX=0.125*6;
-            posY=0.0;
+            texposX=0.125*6;
+            texposY=0.0;
             break;
         case '_':
-            posX=0.125*7;
-            posY=0.0;
+            texposX=0.125*7;
+            texposY=0.0;
             break;
     }
 }
 
-inline static void textRenderer(const char* text, float x, float y, GLFWwindow* window){   
+inline static void textRenderer(const char* text, float x, float y, GLFWwindow* window, int fontSize, float r, float g, float b, originPos e){
+    fontSize=fontSize;
+
+    glDisable(GL_DEPTH_TEST);//disabling the depth buffer allows transparent pixels to be written overlapping the previous glyph without erasing it 
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_ONE,GL_ONE_MINUS_SRC_ALPHA);
+
     Shader program("2dtext.vert","2dtext.frag");
+
+    program.use();
+
+    program.setVec3("textColor",r,g,b);
 
     glfwGetFramebufferSize(window, &width, &height);
 
-    float fwidth=width,fheight=height;Logger(std::to_string(fheight/fwidth));
+    float fwidth=width,fheight=height;
+
+    float ratio=fheight/fwidth;
+    float scale=fontSize/fheight;
+    float posX,posY;
+
+    switch(e) {
+        default: case bottomLeft:
+            posX=(x/fwidth)-1;
+            posY=(y/fheight)-1;
+            break;
+        case bottomRight:
+            posX=((fwidth+x)/fwidth);
+            posY=(y/fheight)-1;
+            break;
+        case topLeft:
+            posX=(x/fwidth)-1;
+            posY=((fheight+y)/fheight);
+            break;
+        case topRight:
+            posX=((fwidth+x)/fwidth);
+            posY=((fheight+y)/fheight);
+            break;
+        case center:
+            posX=0;
+            posY=0;
+            break;
+    }
 
     for(int i=0;i<strlen(text);i++){
         //set glyph texcoords
         char glyph=text[i];
         textCoordinates(glyph);
-        quadVertices[6]=texCoordScale+posX;
-        quadVertices[7]=texCoordScale+posY;
-        quadVertices[14]=texCoordScale+posX;
-        quadVertices[15]=0.0f+posY;
-        quadVertices[22]=0.0f+posX;
-        quadVertices[23]=0.0f+posY;
-        quadVertices[30]=0.0f+posX;
-        quadVertices[31]=texCoordScale+posY;
+        quadVertices[6]=texCoordScale+texposX;
+        quadVertices[7]=texCoordScale+texposY;
+        quadVertices[14]=texCoordScale+texposX;
+        quadVertices[15]=0.0f+texposY;
+        quadVertices[22]=0.0f+texposX;
+        quadVertices[23]=0.0f+texposY;
+        quadVertices[30]=0.0f+texposX;
+        quadVertices[31]=texCoordScale+texposY;
 
-        float ratio=fheight/fwidth;
-        float scale=fontSize/fheight;
-        float dist=2*(fontSize*i)/fwidth;
+        float dist=1.25*(fontSize*i)/fwidth;
 
-        quadVertices[0]=ratio*scale+dist;
-        quadVertices[1]=1.0*scale;
-        quadVertices[8]=ratio*scale+dist;
-        quadVertices[9]=-1.0*scale;
-        quadVertices[16]=-ratio*scale+dist;
-        quadVertices[17]=-1.0*scale;
-        quadVertices[24]=-ratio*scale+dist;
-        quadVertices[25]=1.0*scale;
+        quadVertices[0]=ratio*scale+dist+posX;
+        quadVertices[1]=1.0*scale+posY;
+        quadVertices[8]=ratio*scale+dist+posX;
+        quadVertices[9]=-1.0*scale+posY;
+        quadVertices[16]=-ratio*scale+dist+posX;
+        quadVertices[17]=-1.0*scale+posY;
+        quadVertices[24]=-ratio*scale+dist+posX;
+        quadVertices[25]=1.0*scale+posY;
     
         //update quadVertices in the VBO
         glBindBuffer(GL_ARRAY_BUFFER, textVBO);
@@ -338,6 +375,8 @@ inline static void textRenderer(const char* text, float x, float y, GLFWwindow* 
         glBindVertexArray(textVAO);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     }
+
+    glDisable(GL_BLEND);
 }
 
 #endif /* TEXTRENDERER_H */
