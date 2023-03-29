@@ -21,16 +21,12 @@ float texposX=0.0,texposY=0.0;
 
 int width, height;
 
-float quadVertices[] = {
+float textQuadVertices[] = {
     // positions          // colors           // texture coords
      1.0f,  1.0f, 0.0f,   1.0f, 0.0f, 0.0f,   texCoordScale+texposX, texCoordScale+texposY,   // top right
      1.0f, -1.0f, 0.0f,   0.0f, 1.0f, 0.0f,   texCoordScale+texposX, 0.0f+texposY,   // bottom right
     -1.0f, -1.0f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f+texposX,          0.0f+texposY,   // bottom left
     -1.0f,  1.0f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f+texposX,          texCoordScale+texposY    // top left 
-};
-unsigned int quadIndices[] = {  
-    0, 1, 3, // first triangle
-    1, 2, 3  // second triangle
 };
 
 void textCoordinates(char glyph) {
@@ -345,29 +341,29 @@ inline static void textRenderer(const char* text, float x, float y, GLFWwindow* 
         //set glyph texcoords
         char glyph=text[i];
         textCoordinates(glyph);
-        quadVertices[6]=texCoordScale+texposX;
-        quadVertices[7]=texCoordScale+texposY;
-        quadVertices[14]=texCoordScale+texposX;
-        quadVertices[15]=0.0f+texposY;
-        quadVertices[22]=0.0f+texposX;
-        quadVertices[23]=0.0f+texposY;
-        quadVertices[30]=0.0f+texposX;
-        quadVertices[31]=texCoordScale+texposY;
+        textQuadVertices[6]=texCoordScale+texposX;
+        textQuadVertices[7]=texCoordScale+texposY;
+        textQuadVertices[14]=texCoordScale+texposX;
+        textQuadVertices[15]=0.0f+texposY;
+        textQuadVertices[22]=0.0f+texposX;
+        textQuadVertices[23]=0.0f+texposY;
+        textQuadVertices[30]=0.0f+texposX;
+        textQuadVertices[31]=texCoordScale+texposY;
 
         float dist=1.25*(fontSize*i)/fwidth;
 
-        quadVertices[0]=ratio*scale+dist+posX;
-        quadVertices[1]=1.0*scale+posY;
-        quadVertices[8]=ratio*scale+dist+posX;
-        quadVertices[9]=-1.0*scale+posY;
-        quadVertices[16]=-ratio*scale+dist+posX;
-        quadVertices[17]=-1.0*scale+posY;
-        quadVertices[24]=-ratio*scale+dist+posX;
-        quadVertices[25]=1.0*scale+posY;
+        textQuadVertices[0]=ratio*scale+dist+posX;
+        textQuadVertices[1]=1.0*scale+posY;
+        textQuadVertices[8]=ratio*scale+dist+posX;
+        textQuadVertices[9]=-1.0*scale+posY;
+        textQuadVertices[16]=-ratio*scale+dist+posX;
+        textQuadVertices[17]=-1.0*scale+posY;
+        textQuadVertices[24]=-ratio*scale+dist+posX;
+        textQuadVertices[25]=1.0*scale+posY;
     
-        //update quadVertices in the VBO
+        //update textQuadVertices in the VBO
         glBindBuffer(GL_ARRAY_BUFFER, textVBO);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), quadVertices, GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(textQuadVertices), textQuadVertices, GL_STATIC_DRAW);
         
         program.use();
         glActiveTexture(GL_TEXTURE0);

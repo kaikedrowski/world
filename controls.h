@@ -78,13 +78,16 @@ static inline void keyActions() {
     switch(camera_mode){
         case camera_mode_fps:
             if(key_forward){
+                vec3 cameraFrontTemp={cameraFront[0],cameraFront[1],cameraFront[2]};
                 vec3 product;
                 //set cameraFront y value to 0 to restrict vertical movement
                 float y=cameraFront[1];
                 cameraFront[1]=0;
+                vec3_norm(cameraFront,cameraFront);
                 vec3_scale(product,cameraFront,cameraSpeed);
                 cameraFront[1]=y;
                 vec3_add(cameraPos,cameraPos,product);
+                cameraFront[0]=cameraFrontTemp[0];cameraFront[1]=cameraFrontTemp[1];cameraFront[2]=cameraFrontTemp[2];
             }
             if(key_left){
                 vec3 product;
@@ -94,13 +97,16 @@ static inline void keyActions() {
                 vec3_sub(cameraPos,cameraPos,product);
             }
             if(key_back){
+                vec3 cameraFrontTemp={cameraFront[0],cameraFront[1],cameraFront[2]};
                 vec3 product;
                 //set cameraFront y value to 0 to restrict vertical movement
                 float y=cameraFront[1];
                 cameraFront[1]=0;
+                vec3_norm(cameraFront,cameraFront);
                 vec3_scale(product,cameraFront,cameraSpeed);
                 cameraFront[1]=y;
                 vec3_sub(cameraPos,cameraPos,product);
+                cameraFront[0]=cameraFrontTemp[0];cameraFront[1]=cameraFrontTemp[1];cameraFront[2]=cameraFrontTemp[2];
             }
             if(key_right){
                 vec3 product;

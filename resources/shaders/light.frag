@@ -1,7 +1,14 @@
 #version 330 core
 out vec4 FragColor;
 
+in vec3 FragPos;
+
+uniform vec3 circleCenter;
+uniform float circleRadius;
+
 void main()
 {
-    FragColor = vec4(1.0); // set all 4 vector values to 1.0
+    float distanceToCenter=distance(FragPos.xyz,circleCenter);
+    float alpha=smoothstep(circleRadius,circleRadius/2.0,distanceToCenter);
+    FragColor=vec4(alpha);
 }

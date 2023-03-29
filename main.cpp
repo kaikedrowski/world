@@ -22,17 +22,20 @@ bool guitext=true;
 
 /* ---------- */
 
+void renderScene(const Shader &shader);
+void renderQuad();
+
 vec3 cubePositions[] = {
     { 0.0f,  0.0f,  0.0f},
-    { 2.0f,  5.0f, -15.0f},
-    {-1.5f, -2.2f, -2.5f},
-    {-3.8f, -2.0f, -12.3f},
+    { 2.0f,  0.0f,  0.0f},
+    { 0.0f,  2.0f,  0.0f},
+    { 0.0f,  0.0f,  2.0f},
     { 2.4f, -0.4f, -3.5f},
-    {-1.7f,  3.0f, -7.5f},
+    {-1.7f,  3.0f,  2.5f},
     { 1.3f, -2.0f, -2.5f},
     { 1.5f,  2.0f, -2.5f},
     { 1.5f,  0.2f, -1.5f},
-    {-1.3f,  1.0f, -1.5f}
+    {-1.3f,  15.0f, -1.5f}
 };
 
 static void error_callback(int error, const char* description)
@@ -68,6 +71,10 @@ void rendertext(GLFWwindow* window){
         textRenderer(pos.c_str(),32.0,-96.0,window,32,1.0,1.0,1.0,topLeft);
     }
 }
+
+float ratio;
+int screenWidth, screenHeight;
+mat4x4 m, v, p, mvp;
 
 int main(void)
 {
@@ -121,6 +128,8 @@ int main(void)
 
     Shader mainShader("main.vert","main.frag");
     Shader lightShader("main.vert","light.frag");
+    Shader simpleDepthShader("shadow_mapping_depth.vert", "shadow_mapping_depth.frag");
+    Shader debugDepthQuad("debug_quad.vert", "debug_quad_depth.frag");
 
     //cubes
     GLuint VBO, texcubeVAO;
@@ -185,7 +194,7 @@ int main(void)
     fontTexture=loadTexture("../font/bitmapfont.bmp",GL_NEAREST_MIPMAP_NEAREST,GL_NEAREST);
 
     // configure depth map FBO
-    const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
+    const unsigned int SHADOW_WIDTH = 4096, SHADOW_HEIGHT = 4096;
     unsigned int depthMapFBO;
     glGenFramebuffers(1, &depthMapFBO);
     // create depth texture
@@ -213,9 +222,17 @@ int main(void)
     mainShader.use();
     mainShader.setInt("material.diffuse", 0);
     mainShader.setInt("material.specular", 1);
+    mainShader.setInt("shadowMap",2);
+    debugDepthQuad.use();
+    debugDepthQuad.setInt("depthMap", 0);
 
     while (!glfwWindowShouldClose(window))
     {
+        double gameTime=std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count()%100000000;
+        float tx=sin(radians(gameTime)/10000)*100+cameraPos[0];
+        float ty=cos(radians(gameTime)/10000)*100+cameraPos[1];
+        float tz=cameraPos[2];
+
         loopTimer();
 
         keyActions();
@@ -225,48 +242,57 @@ int main(void)
 
         glEnable(GL_DEPTH_TEST);
 
+        glfwGetFramebufferSize(window, &screenWidth, &screenHeight);
+        ratio = screenWidth / (float) screenHeight;
+
+        // render depth of scene to texture from the light's perspective
+        mat4x4 lightProjection, lightView, lightSpaceMatrix;
+        float near_plane = 50.0f, far_plane = 200.0f;
+        mat4x4_ortho(lightProjection, -10.0f, 10.0f, -10.0f, 10.0f, near_plane, far_plane);
+        vec3 lightPos={tx,ty,tz};
+        vec3 center={0.0f,0.0f,0.0f};
+        vec3 up={0.0,1.0,0.0};
+        mat4x4_look_at(lightView, lightPos, center, up);
+        mat4x4_mul(lightSpaceMatrix,lightProjection,lightView);
+        // render scene from light's point of view
+        simpleDepthShader.use();
+        simpleDepthShader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
+
+        // bind vertex array
+        glBindVertexArray(texcubeVAO);
+
+        glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+        glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+        glClear(GL_DEPTH_BUFFER_BIT);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, diffuseMap);
+        renderScene(simpleDepthShader);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+        // reset viewport
+        glViewport(0, 0, screenWidth, screenHeight);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
         mainShader.use();
         mainShader.setVec3("viewPos", cameraPos);
         mainShader.setFloat("material.shininess", 32.0f);
-
-        double gameTime=std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count()%100000000;
-
-        float tx=sin(radians(gameTime)/10000)*50000;
-        float ty=cos(radians(gameTime)/10000)*50000;
-        float tz=1.0f;
-
         //light properties
-        // directional light
-        mainShader.setVec3("dirLight.direction", -tx, -ty, -tz);
-        mainShader.setVec3("dirLight.ambient", 0.2f, 0.2f, 0.2f);
-        mainShader.setVec3("dirLight.diffuse", 0.5f, 0.5f, 0.5f);
-        mainShader.setVec3("dirLight.specular", 1.0f, 1.0f, 1.0f);
-        // point light 1
-        mainShader.setVec3("pointLights[0].ambient", 0.05f, 0.05f, 0.05f);
-        mainShader.setVec3("pointLights[0].position", tx, ty, tz);
-        mainShader.setVec3("pointLights[0].diffuse", 0.8f, 0.8f, 0.8f);
-        mainShader.setVec3("pointLights[0].specular", 1.0f, 1.0f, 1.0f);
-        mainShader.setFloat("pointLights[0].constant", 1.0f);
-        mainShader.setFloat("pointLights[0].linear", 0.0014f);
-        mainShader.setFloat("pointLights[0].quadratic", 0.000007f);
-        // spotLight
-        mainShader.setVec3("spotLight.position", cameraPos);
-        mainShader.setVec3("spotLight.direction", cameraFront);
-        mainShader.setVec3("spotLight.ambient", 0.0f, 0.0f, 0.0f);
-        mainShader.setVec3("spotLight.diffuse", 0.0f, 0.0f, 0.0f);
-        mainShader.setVec3("spotLight.specular", 0.0f, 0.0f, 0.0f);
-        mainShader.setFloat("spotLight.constant", 1.0f);
-        mainShader.setFloat("spotLight.linear", 0.09f);
-        mainShader.setFloat("spotLight.quadratic", 0.032f);
-        mainShader.setFloat("spotLight.cutOff", cos(radians(12.5f)));
-        mainShader.setFloat("spotLight.outerCutOff", cos(radians(15.0f)));
+        mainShader.setVec3("light.ambient",0.05,0.05,0.05);
+        mainShader.setVec3("light.diffuse",0.6,0.55,0.5);
+        mainShader.setVec3("light.specular",0.5,0.5,0.5);
+        // light space matrix for shadows
+        mainShader.setVec3("lightPos", lightPos);
+        mainShader.setMat4("lightSpaceMatrix",lightSpaceMatrix);
 
-        float ratio;
-        int width, height;
-        mat4x4 m, v, p, mvp;
-
-        glfwGetFramebufferSize(window, &width, &height);
-        ratio = width / (float) height;
+        // bind diffuse map
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, diffuseMap);
+        // bind specular map
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, specularMap);
+        // bind depth map
+        glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_2D, depthMap);
 
         // pass projection matrix to shader (note that in this case it could change every frame)
         mat4x4_perspective(p, 1.57, ratio, 0.001, 100000.0);
@@ -278,52 +304,39 @@ int main(void)
         mat4x4_look_at(v,cameraPos,sum,cameraUp);
         mainShader.setMat4("view",v);
 
-        // world transformation
-        mat4x4_identity(m);// make sure to initialize matrix to identity matrix first
-        mainShader.setMat4("model",m);
-
-        // bind diffuse map
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, diffuseMap);
-        // bind specular map
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, specularMap);
-
+        // bind vertex array
         glBindVertexArray(texcubeVAO);
-        for (unsigned int i = 0; i < 10; i++)
-        {
-            // calculate the model matrix for each object and pass it to shader before drawing
-            mat4x4 model;
-            mat4x4_identity(model);
-            mat4x4_translate(model, cubePositions[i][0],cubePositions[i][1],cubePositions[i][2]);
-            float angle = 20.0f * i;
-            mat4x4_rotate(model,model,1.0f,0.3f,0.5f,radians(angle));
-            mainShader.setMat4("model", model);
 
-            glDrawArrays(GL_TRIANGLES, 0, 36);
-        }
+        renderScene(mainShader);
 
+        //draw sun
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
         lightShader.use();
         lightShader.setMat4("projection", p);
         lightShader.setMat4("view", v);
         lightShader.setVec3("circleCenter",tx,ty,tz);
-        float circleRadius=3000.0f;
+        float circleRadius=7.0f;
         lightShader.setFloat("circleRadius",circleRadius);
         glBindVertexArray(lightVAO);
-        for (unsigned int i = 0; i < 1; i++)
-        {
-            mat4x4 model;
-            mat4x4_identity(model);
-            mat4x4_translate(model, tx,ty,tz);
-            mat4x4_rotate_Y(model,model,radians(90));
-            mat4x4_rotate_X(model,model,-atan(ty/tx));
-            mat4x4_scale_aniso(model, model, circleRadius, circleRadius, circleRadius);
-            lightShader.setMat4("model", model);
-            glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-        }
+        mat4x4 model;
+        mat4x4_identity(model);
+        mat4x4_translate(model, tx,ty,tz);
+        mat4x4_rotate_Y(model,model,radians(90));
+        mat4x4_rotate_X(model,model,-atan(ty/tx));
+        mat4x4_scale_aniso(model, model, circleRadius, circleRadius, circleRadius);
+        lightShader.setMat4("model", model);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
         glDisable(GL_BLEND);
+
+        // render Depth map to quad for visual debugging
+        // ---------------------------------------------
+        /*debugDepthQuad.use();
+        debugDepthQuad.setFloat("near_plane", near_plane);
+        debugDepthQuad.setFloat("far_plane", far_plane);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, depthMap);
+        renderQuad();*/
 
         rendertext(window);
  
@@ -336,4 +349,55 @@ int main(void)
     glfwTerminate();
     Logger("Window Closed");
     exit(EXIT_SUCCESS);
+}
+
+void renderScene(const Shader &shader){
+
+    // world transformation
+    mat4x4_identity(m);// make sure to initialize matrix to identity matrix first
+    shader.setMat4("model",m);
+
+    for (unsigned int i = 0; i < 10; i++)
+    {
+        // calculate the model matrix for each object and pass it to shader before drawing
+        mat4x4 model;
+        mat4x4_identity(model);
+        mat4x4_translate(model, cubePositions[i][0],cubePositions[i][1],cubePositions[i][2]);
+        float angle = 20.0f * i;
+        mat4x4_rotate(model,model,1.0f,0.3f,0.5f,radians(angle));
+        shader.setMat4("model", model);
+
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+    }
+}
+
+// renderQuad() renders a 1x1 XY quad in NDC
+// -----------------------------------------
+unsigned int quadVAO = 0;
+unsigned int quadVBO;
+void renderQuad()
+{
+    if (quadVAO == 0)
+    {
+        float quadVertices[] = {
+            // positions        // texture Coords
+            -1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
+            -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
+             1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
+             1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+        };
+        // setup plane VAO
+        glGenVertexArrays(1, &quadVAO);
+        glGenBuffers(1, &quadVBO);
+        glBindVertexArray(quadVAO);
+        glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    }
+    glBindVertexArray(quadVAO);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBindVertexArray(0);
 }
