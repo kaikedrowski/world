@@ -10,5 +10,5 @@ void main()
 {
     float distanceToCenter=distance(FragPos.xyz,circleCenter);
     float alpha=smoothstep(circleRadius,circleRadius/2.0,distanceToCenter);
-    FragColor=vec4(alpha);
+    FragColor=vec4(1.0,1.0,1.0,alpha);
 }
