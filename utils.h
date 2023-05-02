@@ -76,10 +76,6 @@ unsigned int quadIndices[] = {
     1, 2, 3  // second triangle
 };
 
-static inline double radians(double deg) {
-    return 0.0174533f*deg;
-}
-
 static inline const char *getShaderSource(const char *fileName)
 {   
     //declare variables

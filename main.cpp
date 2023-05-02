@@ -3,7 +3,8 @@
 #include <GLFW/glfw3.h>
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
-#include "linmath.h"
+#include <glm/glm.hpp>
+#include <glm/ext.hpp>
 
 #include <iostream>
 #include <stdio.h>
@@ -31,17 +32,17 @@ unsigned int colorBuffer,rboDepth;
 void renderScene(const Shader &shader);
 void renderQuad();
 
-vec3 cubePositions[] = {
-    { 0.0f,  0.0f,  0.0f},
-    { 2.0f,  0.0f,  0.0f},
-    { 0.0f,  2.0f,  0.0f},
-    { 0.0f,  0.0f,  2.0f},
-    { 2.4f, -0.4f, -3.5f},
-    {-1.7f,  3.0f,  2.5f},
-    { 1.3f, -2.0f, -2.5f},
-    { 1.5f,  2.0f, -2.5f},
-    { 1.5f,  0.2f, -1.5f},
-    {-1.3f,  15.0f, -1.5f}
+glm::vec3 cubePositions[] = {
+    glm::vec3( 0.0f,  0.0f,  0.0f),
+    glm::vec3( 2.0f,  5.0f, -15.0f),
+    glm::vec3(-1.5f, -2.2f, -2.5f),
+    glm::vec3(-3.8f, -2.0f, -12.3f),
+    glm::vec3( 2.4f, -0.4f, -3.5f),
+    glm::vec3(-1.7f,  3.0f, -7.5f),
+    glm::vec3( 1.3f, -2.0f, -2.5f),
+    glm::vec3( 1.5f,  2.0f, -2.5f),
+    glm::vec3( 1.5f,  0.2f, -1.5f),
+    glm::vec3(-1.3f,  1.0f, -1.5f)
 };
 
 static void error_callback(int error, const char* description)
@@ -89,7 +90,7 @@ void rendertext(GLFWwindow* window){
 }
 
 float ratio;
-mat4x4 m, v, p, mvp;
+glm::mat4 m, v, p, mvp;
 GLuint texcubeVAO,texCubeIndexBuffer;
 
 int main(void)
@@ -279,8 +280,8 @@ int main(void)
     while (!glfwWindowShouldClose(window))
     {
         double gameTime=std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count()%100000000;
-        float tx=sin(radians(gameTime)/10000)*100+cameraPos[0];
-        float ty=cos(radians(gameTime)/10000)*100+cameraPos[1];
+        float tx=sin(glm::radians(gameTime)/10000)*100+cameraPos[0];
+        float ty=cos(glm::radians(gameTime)/10000)*100+cameraPos[1];
         float tz=cameraPos[2];
 
         loopTimer();
@@ -295,16 +296,16 @@ int main(void)
         glfwGetFramebufferSize(window, &screenWidth, &screenHeight);
         ratio = screenWidth / (float) screenHeight;
 
-        mat4x4 lightProjection, lightView, lightSpaceMatrix;
-        vec3 lightPos={tx,ty,tz};
-        vec3 center={0.0f,0.0f,0.0f};
-        vec3 up={0.0,1.0,0.0};
+        glm::mat4 lightProjection, lightView, lightSpaceMatrix;
+        glm::vec3 lightPos(tx,ty,tz);
+        glm::vec3 center(0.0f,0.0f,0.0f);
+        glm::vec3 up(0.0f,1.0f,0.0f);
         if(shadows){
             // render depth of scene to texture from the light's perspective
             float near_plane = 50.0f, far_plane = 200.0f;
-            mat4x4_ortho(lightProjection, -10.0f, 10.0f, -10.0f, 10.0f, near_plane, far_plane);
-            mat4x4_look_at(lightView, lightPos, center, up);
-            mat4x4_mul(lightSpaceMatrix,lightProjection,lightView);
+            lightProjection=glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, near_plane, far_plane);
+            lightView=glm::lookAt(lightPos, center, up);
+            lightSpaceMatrix=lightProjection*lightView;
             // render scene from light's point of view
             simpleDepthShader.use();
             simpleDepthShader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
@@ -348,13 +349,11 @@ int main(void)
             glBindTexture(GL_TEXTURE_2D, depthMap);
 
             // pass projection matrix to shader (note that in this case it could change every frame)
-            mat4x4_perspective(p, 1.57, ratio, 0.001, 100000.0);
+            p=glm::perspective(1.57f, ratio, 0.001f, 100000.0f);
             mainShader.setMat4("projection",p);
 
             // camera/view transformation
-            vec3 sum;
-            vec3_add(sum,cameraPos,cameraFront);
-            mat4x4_look_at(v,cameraPos,sum,cameraUp);
+            v=glm::lookAt(cameraPos,cameraPos+cameraFront,cameraUp);
             mainShader.setMat4("view",v);
 
             renderScene(mainShader);
@@ -370,12 +369,11 @@ int main(void)
             float circleRadius=7.0f;
             lightShader.setFloat("circleRadius",circleRadius);
             glBindVertexArray(lightVAO);
-            mat4x4 model;
-            mat4x4_identity(model);
-            mat4x4_translate(model, tx,ty,tz);
-            mat4x4_rotate_Y(model,model,radians(90));
-            mat4x4_rotate_X(model,model,-atan(ty/tx));
-            mat4x4_scale_aniso(model, model, circleRadius, circleRadius, circleRadius);
+            glm::mat4 model=glm::mat4(1.0f);
+            model=glm::translate(model, glm::vec3(tx,ty,tz));
+            model=glm::rotate(model,glm::radians(90.0f),glm::vec3(0.0,1.0,0.0));
+            model=glm::rotate(model,-atan(ty/tx),glm::vec3(1.0,0.0,0.0));
+            model=glm::scale(model,glm::vec3(circleRadius));
             lightShader.setMat4("model", model);
             glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
             glDisable(GL_BLEND);
@@ -423,20 +421,14 @@ void renderScene(const Shader &shader){
     // bind index buffer
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,texCubeIndexBuffer);
 
-    // world transformation
-    mat4x4_identity(m);// make sure to initialize matrix to identity matrix first
-    shader.setMat4("model",m);
-
     for (unsigned int i = 0; i < 10; i++)
     {
         // calculate the model matrix for each object and pass it to shader before drawing
-        mat4x4 model;
-        mat4x4_identity(model);
-        mat4x4_translate(model, cubePositions[i][0],cubePositions[i][1],cubePositions[i][2]);
+        glm::mat4 model=glm::mat4(1.0f);
+        model=glm::translate(model, cubePositions[i]);
         float angle = 20.0f * i;
-        mat4x4_rotate(model,model,1.0f,0.3f,0.5f,radians(angle));
+        model=glm::rotate(model,glm::radians(angle),glm::vec3(1.0f,0.3f,0.5f));
         shader.setMat4("model", model);
-
         glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, nullptr);
     }
 }

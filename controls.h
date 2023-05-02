@@ -1,12 +1,14 @@
 #ifndef CONTROLS_H
 #define CONTROLS_H
 
-#include "utils.h"
-#include "linmath.h"
+#include <glm/glm.hpp>
+#include <glm/ext.hpp>
 
-vec3 cameraPos={0.0,0.0,3.0};
-vec3 cameraFront={0.0,0.0,-1.0};
-vec3 cameraUp={0.0,1.0,0.0};
+#include "utils.h"
+
+glm::vec3 cameraPos(0.0,0.0,3.0);
+glm::vec3 cameraFront(0.0,0.0,-1.0);
+glm::vec3 cameraUp(0.0,1.0,0.0);
 float cameraSpeed=0.05f;
 
 bool firstMouse = true;
@@ -78,42 +80,31 @@ static inline void keyActions() {
     switch(camera_mode){
         case camera_mode_fps:
             if(key_forward){
-                vec3 cameraFrontTemp={cameraFront[0],cameraFront[1],cameraFront[2]};
-                vec3 product;
+                glm::vec3 cameraFrontTemp=cameraFront;
                 //set cameraFront y value to 0 to restrict vertical movement
                 float y=cameraFront[1];
                 cameraFront[1]=0;
-                vec3_norm(cameraFront,cameraFront);
-                vec3_scale(product,cameraFront,cameraSpeed);
+                cameraFront=glm::normalize(cameraFront);
+                cameraPos+=cameraFront*cameraSpeed;
                 cameraFront[1]=y;
-                vec3_add(cameraPos,cameraPos,product);
-                cameraFront[0]=cameraFrontTemp[0];cameraFront[1]=cameraFrontTemp[1];cameraFront[2]=cameraFrontTemp[2];
+                cameraFront=cameraFrontTemp;
             }
             if(key_left){
-                vec3 product;
-                vec3_mul_cross(product,cameraFront,cameraUp);
-                vec3_norm(product,product);
-                vec3_scale(product,product,cameraSpeed);
-                vec3_sub(cameraPos,cameraPos,product);
+                cameraPos-=glm::normalize(glm::cross(cameraFront,cameraUp))*cameraSpeed;
             }
             if(key_back){
-                vec3 cameraFrontTemp={cameraFront[0],cameraFront[1],cameraFront[2]};
-                vec3 product;
+                glm::vec3 cameraFrontTemp=cameraFront;
+                glm::vec3 product;
                 //set cameraFront y value to 0 to restrict vertical movement
                 float y=cameraFront[1];
                 cameraFront[1]=0;
-                vec3_norm(cameraFront,cameraFront);
-                vec3_scale(product,cameraFront,cameraSpeed);
+                cameraFront=glm::normalize(cameraFront);
+                cameraPos-=cameraFront*cameraSpeed;
                 cameraFront[1]=y;
-                vec3_sub(cameraPos,cameraPos,product);
-                cameraFront[0]=cameraFrontTemp[0];cameraFront[1]=cameraFrontTemp[1];cameraFront[2]=cameraFrontTemp[2];
+                cameraFront=cameraFrontTemp;
             }
             if(key_right){
-                vec3 product;
-                vec3_mul_cross(product,cameraFront,cameraUp);
-                vec3_norm(product,product);
-                vec3_scale(product,product,cameraSpeed);
-                vec3_add(cameraPos,cameraPos,product);
+                cameraPos+=glm::normalize(glm::cross(cameraFront,cameraUp))*cameraSpeed;
             }
             if(key_up){
                 cameraPos[1]+=cameraSpeed;
@@ -124,28 +115,16 @@ static inline void keyActions() {
             break;
         case camera_mode_three_dimensional:
             if(key_forward){
-                vec3 product;
-                vec3_scale(product,cameraFront,cameraSpeed);
-                vec3_add(cameraPos,cameraPos,product);
+                cameraPos+=cameraFront*cameraSpeed;
             }
             if(key_left){
-                vec3 product;
-                vec3_mul_cross(product,cameraFront,cameraUp);
-                vec3_norm(product,product);
-                vec3_scale(product,product,cameraSpeed);
-                vec3_sub(cameraPos,cameraPos,product);
+                cameraPos-=glm::normalize(glm::cross(cameraFront,cameraUp))*cameraSpeed;
             }
             if(key_back){
-                vec3 product;
-                vec3_scale(product,cameraFront,cameraSpeed);
-                vec3_sub(cameraPos,cameraPos,product);
+                cameraPos-=cameraFront*cameraSpeed;
             }
             if(key_right){
-                vec3 product;
-                vec3_mul_cross(product,cameraFront,cameraUp);
-                vec3_norm(product,product);
-                vec3_scale(product,product,cameraSpeed);
-                vec3_add(cameraPos,cameraPos,product);
+                cameraPos+=glm::normalize(glm::cross(cameraFront,cameraUp))*cameraSpeed;
             }
             if(key_up){
                 cameraPos[1]+=cameraSpeed;
@@ -188,11 +167,11 @@ static inline void cursorpositioncallback(GLFWwindow* window, double xposIn, dou
     if (pitch < -89.0f)
         pitch = -89.0f;
 
-    vec3 front;
-    front[0] = cos(radians(yaw)) * cos(radians(pitch));
-    front[1] = sin(radians(pitch));
-    front[2] = sin(radians(yaw)) * cos(radians(pitch));
-    vec3_norm(cameraFront,front);
+    glm::vec3 front;
+    front[0] = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+    front[1] = sin(glm::radians(pitch));
+    front[2] = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+    cameraFront=glm::normalize(front);
 }
 
 #endif /* CONTROLS_H */

@@ -2,7 +2,7 @@
 #define SHADER_H
 
 #include <glad/glad.h>
-#include "linmath.h"
+#include <glm/glm.hpp>
 
 #include <string>
 #include <fstream>
@@ -68,7 +68,7 @@ public:
         glUniform1f(glGetUniformLocation(ID, name.c_str()), value); 
     }
     // ------------------------------------------------------------------------
-    void setVec2(const std::string &name, const vec2 &value) const
+    void setVec2(const std::string &name, const glm::vec2 &value) const
     { 
         glUniform2fv(glGetUniformLocation(ID, name.c_str()), 1, &value[0]); 
     }
@@ -77,7 +77,7 @@ public:
         glUniform2f(glGetUniformLocation(ID, name.c_str()), x, y); 
     }
     // ------------------------------------------------------------------------
-    void setVec3(const std::string &name, const vec3 &value) const
+    void setVec3(const std::string &name, const glm::vec3 &value) const
     { 
         glUniform3fv(glGetUniformLocation(ID, name.c_str()), 1, &value[0]); 
     }
@@ -86,7 +86,7 @@ public:
         glUniform3f(glGetUniformLocation(ID, name.c_str()), x, y, z); 
     }
     // ------------------------------------------------------------------------
-    void setVec4(const std::string &name, const vec4 &value) const
+    void setVec4(const std::string &name, const glm::vec4 &value) const
     { 
         glUniform4fv(glGetUniformLocation(ID, name.c_str()), 1, &value[0]); 
     }
@@ -95,7 +95,7 @@ public:
         glUniform4f(glGetUniformLocation(ID, name.c_str()), x, y, z, w); 
     }
     // ------------------------------------------------------------------------
-    void setMat4(const std::string &name, const mat4x4 &mat) const
+    void setMat4(const std::string &name, const glm::mat4x4 &mat) const
     {
         glUniformMatrix4fv(glGetUniformLocation(ID, name.c_str()), 1, GL_FALSE, &mat[0][0]);
     }
