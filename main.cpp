@@ -131,7 +131,7 @@ int main(void)
         glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
     #endif
  
-    window = glfwCreateWindow(screenWidth, screenHeight, "MaxRockatasky Simulator", NULL, NULL);
+    window = glfwCreateWindow(screenWidth, screenHeight, "Graphics Simulator", NULL, NULL);
     if (!window)
     {
         glfwTerminate();

@@ -1,6 +1,6 @@
 cmake_minimum_required( VERSION 3.1 )
 
-project( maxrockatasky-simulator )
+project( graphics-simulator )
 
 find_package( OpenGL REQUIRED )
 
@@ -23,14 +23,14 @@ set( SIMULATOR-SRC
      utils.h
      )
      
-add_executable( maxrockatasky-simulator WIN32 ${SIMULATOR-SRC} )
-target_link_libraries( maxrockatasky-simulator ${OPENGL_LIBRARIES} glfw )
-target_link_libraries( maxrockatasky-simulator glad )
-target_link_libraries( maxrockatasky-simulator glm )
+add_executable( graphics-simulator WIN32 ${SIMULATOR-SRC} )
+target_link_libraries( graphics-simulator ${OPENGL_LIBRARIES} glfw )
+target_link_libraries( graphics-simulator glad )
+target_link_libraries( graphics-simulator glm )
 if( MSVC )
     if(${CMAKE_VERSION} VERSION_LESS "3.6.0") 
         message( "\n\t[ WARNING ]\n\n\tCMake version lower than 3.6.\n\n\t - Please update CMake and rerun; OR\n\t - Manually set 'glfw-game' as StartUp Project in Visual Studio.\n" )
     else()
-        set_property( DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT maxrockatasky-simulator )
+        set_property( DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT graphics-simulator )
     endif()
 endif()
