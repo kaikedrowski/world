@@ -1,6 +1,6 @@
 cmake_minimum_required( VERSION 3.1 )
 
-project( graphics-simulator )
+project( world )
 
 find_package( OpenGL REQUIRED )
 
@@ -23,14 +23,14 @@ set( SIMULATOR-SRC
      utils.h
      )
      
-add_executable( graphics-simulator WIN32 ${SIMULATOR-SRC} )
-target_link_libraries( graphics-simulator ${OPENGL_LIBRARIES} glfw )
-target_link_libraries( graphics-simulator glad )
-target_link_libraries( graphics-simulator glm )
+add_executable( world WIN32 ${SIMULATOR-SRC} )
+target_link_libraries( world ${OPENGL_LIBRARIES} glfw )
+target_link_libraries( world glad )
+target_link_libraries( world glm )
 if( MSVC )
     if(${CMAKE_VERSION} VERSION_LESS "3.6.0") 
         message( "\n\t[ WARNING ]\n\n\tCMake version lower than 3.6.\n\n\t - Please update CMake and rerun; OR\n\t - Manually set 'glfw-game' as StartUp Project in Visual Studio.\n" )
     else()
-        set_property( DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT graphics-simulator )
+        set_property( DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT world )
     endif()
 endif()

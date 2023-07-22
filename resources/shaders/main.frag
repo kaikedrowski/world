@@ -70,7 +70,7 @@ void main()
     // diffuse
     vec3 lightDir = normalize(lightPos - FragPos);
     float diff = max(dot(lightDir, normal), 0.0);
-    vec3 diffuse = diff * light.diffuse * vec3(texture(material.diffuse, TexCoords));
+    vec3 diffuse = diff * light.diffuse * texture(material.diffuse, TexCoords).rgb;
     // specular
     vec3 viewDir = normalize(viewPos - FragPos);
     vec3 reflectDir = reflect(-lightDir, normal);

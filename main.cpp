@@ -7,9 +7,12 @@
 #include <glm/ext.hpp>
 
 #include <iostream>
-#include <stdio.h>
 #include <thread>
 #include <string>
+#include <vector>
+#include <array>
+
+#include <stdio.h>
 #include <unistd.h>
 
 #include "textrenderer.h"
@@ -27,6 +30,8 @@ bool shadows = true;
 const unsigned int SHADOW_WIDTH = 4096, SHADOW_HEIGHT = 4096;
 bool debugDepth=false;
 float debug_near_plane = 50.0f, debug_far_plane = 200.0f;
+bool faceculling = true;
+bool wireframe = false;
 
 /* ---------- */
 
@@ -37,18 +42,7 @@ void renderScene(const Shader &shader);
 void renderShadows(const Shader &simpleDepthShader);
 void renderQuad();
 
-glm::vec3 cubePositions[] = {
-    glm::vec3( 0.0f,  0.0f,  0.0f),
-    glm::vec3( 2.0f,  5.0f, -5.0f),
-    glm::vec3(-1.5f, -2.2f, -2.5f),
-    glm::vec3(-3.8f, -2.0f, -2.3f),
-    glm::vec3( 2.4f, -0.4f, -3.5f),
-    glm::vec3(-1.7f,  3.0f, 2.5f),
-    glm::vec3( 1.3f, -2.0f, -2.5f),
-    glm::vec3( 1.5f,  2.0f, -2.5f),
-    glm::vec3( 1.5f,  0.2f, -1.5f),
-    glm::vec3(-1.3f,  1.0f, -1.5f)
-};
+glm::vec3 cubePositions[0];
 
 static void error_callback(int error, const char* description)
 {
@@ -85,12 +79,14 @@ static void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 
 void rendertext(GLFWwindow* window){
     if(guitext){
+        glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
         glDisable(GL_CULL_FACE);
         std::string fpstring="FPS "+std::to_string(fps).substr(0,4);
         textRenderer(fpstring.c_str(),32.0,-32.0,window,32,1.0,1.0,1.0,topLeft);
         std::string pos=std::to_string(cameraPos[0]).substr(0,5)+", "+std::to_string(cameraPos[1]).substr(0,5)+", "+std::to_string(cameraPos[2]).substr(0,5);
         textRenderer(pos.c_str(),32.0,-96.0,window,32,1.0,1.0,1.0,topLeft);
-        glEnable(GL_CULL_FACE);
+        if(faceculling)glEnable(GL_CULL_FACE);
+        if(wireframe)glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
     }
 }
 
@@ -106,22 +102,23 @@ unsigned int diffuseMap, specularMap, depthMap;
 GLuint lightVBO, lightEBO, lightVAO;
 unsigned int depthMapFBO;
 
+std::vector<float> vertices;
+std::vector<int> indices;
+
 int main(void)
 {
     glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
 
     Logger("Program Initialized");
-
-    GLFWwindow* window;
-
+    
     glfwSetErrorCallback(error_callback);
- 
+    
     if (!glfwInit())
     {
         Logger("glfwInit Failed");
         exit(EXIT_FAILURE);
     }
- 
+
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
@@ -130,8 +127,8 @@ int main(void)
     #ifdef __APPLE__
         glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
     #endif
- 
-    window = glfwCreateWindow(screenWidth, screenHeight, "Graphics Simulator", NULL, NULL);
+
+    GLFWwindow* window = glfwCreateWindow(screenWidth, screenHeight, "Graphics Simulator", NULL, NULL);
     if (!window)
     {
         glfwTerminate();
@@ -153,10 +150,12 @@ int main(void)
     }
     glfwSwapInterval(1);
 
-    //glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
-    glEnable(GL_CULL_FACE);
-    glCullFace(GL_FRONT);
-    glFrontFace(GL_CW);
+    if(wireframe)glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+    if(faceculling){
+        glEnable(GL_CULL_FACE);
+        glCullFace(GL_BACK);
+        glFrontFace(GL_CCW);
+    }
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_MULTISAMPLE);
 
@@ -189,13 +188,80 @@ int main(void)
         Logger("Framebuffer not complete: "+std::to_string(fboStatus));
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+    //world vertices
+    Logger("Generating Vertices");
+    float iter=15;
+    int loops=0;
+    for(int i=0;i<6;i++){
+        for(float j=0;j<iter;j++){
+            for(float k=0;k<iter;k++){
+                int index=4*loops;
+                for(int l=0;l<4;l++){
+                    float x,y,z;
+                    float dx,dy,dz;
+                    if(i<2)
+                    {
+                        x=cubevertices[i*32+8*l]/iter-(1.0f-1.0f/iter)+j*2/iter;
+                        y=cubevertices[i*32+1+8*l]/iter-(1.0f-1.0f/iter)+k*2/iter;
+                        z=cubevertices[i*32+2+8*l];
+                    }
+                    else if(i<4)
+                    {
+                        x=cubevertices[i*32+8*l];
+                        y=cubevertices[i*32+1+8*l]/iter-(1.0f-1.0f/iter)+j*2/iter;
+                        z=cubevertices[i*32+2+8*l]/iter-(1.0f-1.0f/iter)+k*2/iter;
+                    }
+                    else
+                    {
+                        x=cubevertices[i*32+8*l]/iter-(1.0f-1.0f/iter)+j*2/iter;
+                        y=cubevertices[i*32+1+8*l];
+                        z=cubevertices[i*32+2+8*l]/iter-(1.0f-1.0f/iter)+k*2/iter;
+                    }
+                    dx = x * sqrtf(1.0 - (y*y/2.0) - (z*z/2.0) + (y*y*z*z/3.0));
+                    dy = y * sqrtf(1.0 - (z*z/2.0) - (x*x/2.0) + (z*z*x*x/3.0));
+                    dz = z * sqrtf(1.0 - (x*x/2.0) - (y*y/2.0) + (x*x*y*y/3.0));
+
+                    vertices.insert(
+                        vertices.end(),
+                        {
+                            dx,dy,dz
+                        }
+                    );
+
+                    glm::vec3 norm=glm::normalize(glm::vec3(dx,dy,dz));
+                    vertices.insert(
+                        vertices.end(),
+                        {
+                            norm[0],
+                            norm[1],
+                            norm[2],
+                            cubevertices[i*32+6+8*l],
+                            cubevertices[i*32+7+8*l]
+                        }
+                    );
+                }
+                if(i==0||i==3||i==4)
+                {
+                    indices.insert(indices.end(),{index,index+2,index+1,index,index+3,index+2});
+                }
+                else if(i==1||i==2||i==5)
+                {
+                    indices.insert(indices.end(),{index,index+1,index+2,index,index+2,index+3});
+                }
+                loops++;
+            }
+        }
+    }
+
     //cubes
     GLuint VBO;
     glGenVertexArrays(1, &texcubeVAO);
     glGenBuffers(1, &VBO);
     glBindVertexArray(texcubeVAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(cubevertices), cubevertices, GL_STATIC_DRAW);
+    //multiply vector size by 4 in order to emulate sizeof c float array
+    glBufferData(GL_ARRAY_BUFFER, vertices.size()*4, vertices.data(), GL_STATIC_DRAW);
+    //glBufferData(GL_ARRAY_BUFFER, sizeof(cubevertices), cubevertices, GL_STATIC_DRAW);
     // position attribute
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8*sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
@@ -208,7 +274,8 @@ int main(void)
     //index buffer
     glGenBuffers(1, &texCubeIndexBuffer);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, texCubeIndexBuffer);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER,sizeof(cubeIndices),cubeIndices,GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER,indices.size()*4,indices.data(),GL_STATIC_DRAW);
+    //glBufferData(GL_ELEMENT_ARRAY_BUFFER,sizeof(cubeIndices),cubeIndices,GL_STATIC_DRAW);
  
     //sun
     glGenVertexArrays(1, &lightVAO);
@@ -297,7 +364,7 @@ int main(void)
 
         keyActions();
 
-        glClearColor(0.0f, 0.0f, 1.0f, 1.0f);
+        glClearColor(0.0f, 0.35f, 0.95f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         glEnable(GL_DEPTH_TEST);
@@ -328,7 +395,9 @@ int main(void)
         glBindTexture(GL_TEXTURE_2D, colorBuffer);
         hdrShader.setInt("hdr", hdr);
         hdrShader.setFloat("exposure", exposure);
+        glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
         renderQuad();
+        if(wireframe)glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
 
         rendertext(window);
  
@@ -396,7 +465,8 @@ void renderWorld(const Shader &mainShader, const Shader &lightShader, const Shad
     lightShader.setMat4("model", model);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     glDisable(GL_BLEND);
-    glEnable(GL_CULL_FACE);
+    if(faceculling)
+        glEnable(GL_CULL_FACE);
 
     // render Depth map to quad for visual debugging
     // ---------------------------------------------
@@ -417,16 +487,13 @@ void renderScene(const Shader &shader){
     // bind index buffer
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,texCubeIndexBuffer);
 
-    for (unsigned int i = 0; i < 10; i++)
-    {
-        // calculate the model matrix for each object and pass it to shader before drawing
-        glm::mat4 model=glm::mat4(1.0f);
-        model=glm::translate(model, cubePositions[i]);
-        float angle = 20.0f * i;
-        model=glm::rotate(model,glm::radians(angle),glm::vec3(1.0f,0.3f,0.5f));
-        shader.setMat4("model", model);
-        glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, nullptr);
-    }
+    // calculate the model matrix for each object and pass it to shader before drawing
+    glm::mat4 model=glm::mat4(1.0f);
+    float angle = 0.0f;
+    model=glm::rotate(model,glm::radians(angle),glm::vec3(1.0f,0.3f,0.5f));
+    model=glm::scale(model,glm::vec3(3.0));
+    shader.setMat4("model", model);
+    glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, nullptr);
 }
 
 void renderShadows(const Shader &simpleDepthShader)
@@ -434,7 +501,7 @@ void renderShadows(const Shader &simpleDepthShader)
     glm::vec3 center(0.0f,0.0f,0.0f);
     glm::vec3 up(0.0f,1.0f,0.0f);
     // render depth of scene to texture from the light's perspective
-    lightProjection=glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, debug_near_plane, debug_far_plane);
+    lightProjection=glm::ortho(-20.0f, 20.0f, -20.0f, 20.0f, debug_near_plane, debug_far_plane);
     lightView=glm::lookAt(lightPos, center, up);
     lightSpaceMatrix=lightProjection*lightView;
     // render scene from light's point of view
