@@ -4,6 +4,7 @@ out vec4 FragColor;
 struct Material {
     sampler2D diffuse;
     sampler2D specular;
+    sampler2D normal;
     float shininess;
 };
 
@@ -64,23 +65,24 @@ float ShadowCalculation(vec4 fragPosLightSpace)
 
 void main()
 {
-    vec3 normal = normalize(Normal);
+    vec3 normal = texture(material.normal,TexCoords).rgb;
+    normal=normalize(normal*2.0-1.0);
     // ambient
     vec3 ambient = light.ambient;
     // diffuse
     vec3 lightDir = normalize(lightPos - FragPos);
-    float diff = max(dot(lightDir, normal), 0.0);
+    float diff = dot(lightDir, normal)*max(dot(lightDir, normalize(Normal)), 0.05);
     vec3 diffuse = diff * light.diffuse * texture(material.diffuse, TexCoords).rgb;
     // specular
     vec3 viewDir = normalize(viewPos - FragPos);
     vec3 reflectDir = reflect(-lightDir, normal);
     float spec = 0.0;
     vec3 halfwayDir = normalize(lightDir + viewDir);  
-    spec = pow(max(dot(normal, halfwayDir), 0.0), 64.0);
-    vec3 specular = spec * light.specular * vec3(texture(material.specular,TexCoords));    
+    spec = pow(max(dot(normalize(Normal), halfwayDir), 0.0), 64.0);
+    vec3 specular = spec * light.specular * vec3(texture(material.specular,TexCoords));
     // calculate shadow
     float shadow = ShadowCalculation(FragPosLightSpace);                      
-    vec3 lighting = (ambient + (1.0 - shadow) * (diffuse + specular));    
+    vec3 lighting = (ambient + (1.0) * (diffuse + specular));    
     
     FragColor = vec4(lighting, 1.0);
 }

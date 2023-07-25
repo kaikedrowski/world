@@ -6,7 +6,7 @@
 
 #include "utils.h"
 
-glm::vec3 cameraPos(0.0,0.0,3.0);
+glm::vec3 cameraPos(0.0,0.0,15.0);
 glm::vec3 cameraFront(0.0,0.0,-1.0);
 glm::vec3 cameraUp(0.0,1.0,0.0);
 float cameraSpeed=0.05f;
