@@ -23,8 +23,8 @@
 
 //config
 bool guitext = true;
-bool hdr = false;
-float exposure = 0.5f;
+bool hdr = true;
+float exposure = 2.2f;
 int screenWidth=960, screenHeight=540;
 bool shadows = true;
 const unsigned int SHADOW_WIDTH = 4096, SHADOW_HEIGHT = 4096;
@@ -85,6 +85,10 @@ void rendertext(GLFWwindow* window){
         textRenderer(fpstring.c_str(),32.0,-32.0,window,32,1.0,1.0,1.0,topLeft);
         std::string pos=std::to_string(cameraPos[0]).substr(0,5)+", "+std::to_string(cameraPos[1]).substr(0,5)+", "+std::to_string(cameraPos[2]).substr(0,5);
         textRenderer(pos.c_str(),32.0,-96.0,window,32,1.0,1.0,1.0,topLeft);
+        std::string fr="front: "+std::to_string(cameraFront[0]).substr(0,5)+", "+std::to_string(cameraFront[1]).substr(0,5)+", "+std::to_string(cameraFront[2]).substr(0,5);
+        textRenderer(fr.c_str(),32.0,-160.0,window,32,1.0,1.0,1.0,topLeft);
+        std::string up="up: "+std::to_string(cameraUp[0]).substr(0,5)+", "+std::to_string(cameraUp[1]).substr(0,5)+", "+std::to_string(cameraUp[2]).substr(0,5);
+        textRenderer(up.c_str(),32.0,-224.0,window,32,1.0,1.0,1.0,topLeft);
         if(faceculling)glEnable(GL_CULL_FACE);
         if(wireframe)glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
     }
@@ -97,7 +101,7 @@ glm::mat4 m, v, p, mvp;
 GLuint texcubeVAO,texCubeIndexBuffer;
 
 glm::mat4 lightProjection, lightView, lightSpaceMatrix;
-glm::vec3 lightPos;
+glm::vec3 lightPos=glm::vec3(0.0,0.0,100.0);
 
 unsigned int diffuseMap, specularMap, normalMap, depthMap, skybox;
 
@@ -126,7 +130,7 @@ int main(void)
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    glfwWindowHint(GLFW_SAMPLES, 4);
+    //glfwWindowHint(GLFW_SAMPLES, 4);
 
     #ifdef __APPLE__
         glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
@@ -161,7 +165,7 @@ int main(void)
         glFrontFace(GL_CCW);
     }
     glEnable(GL_DEPTH_TEST);
-    glEnable(GL_MULTISAMPLE);
+    //glEnable(GL_MULTISAMPLE);
 
     Shader mainShader("main.vert","main.frag");
     Shader lightShader("main.vert","light.frag");
@@ -206,7 +210,7 @@ int main(void)
 
     //world vertices
     Logger("Generating Vertices");
-    float iter=10;
+    float iter=1000;
     int loops=0;
     for(int i=0;i<6;i++){
         for(float j=0;j<iter;j++){
@@ -242,7 +246,7 @@ int main(void)
                     int pix=(int)(((texcoords.x*hwidth))+hwidth*((int)(texcoords.y*(hheight-1))));
                     pix*=nChannels;
                     unsigned char* texel=data+pix;
-                    float disp=((float)texel[0]/72078.9869794)+1.0;
+                    float disp=((float)texel[0]/184519.548)+1.0;
                     dx*=disp;dy*=disp;dz*=disp;
 
                     vertices.insert(
@@ -364,12 +368,12 @@ int main(void)
     glBindTexture(GL_TEXTURE_CUBE_MAP, skybox);
     std::vector<std::string> faces
     {
-        "cubemaps/+x.jpg",
-        "cubemaps/-x.jpg",
-        "cubemaps/+y.jpg",
-        "cubemaps/-y.jpg",
-        "cubemaps/-z.jpg",
-        "cubemaps/+z.jpg"
+        "cubemaps/+x.png",
+        "cubemaps/-x.png",
+        "cubemaps/+y.png",
+        "cubemaps/-y.png",
+        "cubemaps/-z.png",
+        "cubemaps/+z.png"
     };
     skybox = loadCubemap(faces);  
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -418,13 +422,15 @@ int main(void)
     hdrShader.use();
     hdrShader.setInt("hdrBuffer", 0);
 
+    cameraView=glm::lookAt(cameraPos,cameraPos+cameraFront,cameraUp);
+
     while (!glfwWindowShouldClose(window))
     {
         gameTime=std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count()%100000000/10000.0;
 
         loopTimer();
 
-        keyActions();
+        keyActions();    
 
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -433,8 +439,6 @@ int main(void)
 
         glfwGetFramebufferSize(window, &screenWidth, &screenHeight);
         ratio = screenWidth / (float) screenHeight;
-
-        lightPos=glm::vec3(0.0,0.0,100.0);
         
         if(shadows)
         {
@@ -506,7 +510,7 @@ void renderWorld(const Shader &mainShader, const Shader &lightShader, const Shad
     mainShader.setMat4("projection",p);
 
     // camera/view transformation
-    v=glm::lookAt(cameraPos,cameraPos+cameraFront,cameraUp);
+    v=cameraView;
     mainShader.setMat4("view",v);
 
     renderScene(mainShader);
@@ -558,7 +562,14 @@ void renderWorld(const Shader &mainShader, const Shader &lightShader, const Shad
     }
 }
 
+double prev_gameTime=0.0;
 void renderScene(const Shader &shader){
+    // rotate cameraPos and cameraFront by earth's rotation
+    glm::mat4 rotation_matrix=glm::rotate(glm::mat4(1.0f),(float)glm::radians(gameTime-prev_gameTime),glm::vec3(0.0f,1.0f,0.0f));
+    cameraPos=glm::vec3(glm::vec4(cameraPos,1.0f)*rotation_matrix);
+    cameraFront=glm::vec3(glm::vec4(cameraFront,1.0f)*rotation_matrix);
+    prev_gameTime=gameTime;
+
     // bind vertex array
     glBindVertexArray(texcubeVAO);
 
@@ -568,7 +579,7 @@ void renderScene(const Shader &shader){
     // calculate the model matrix for each object and pass it to shader before drawing
     glm::mat4 model=glm::mat4(1.0f);
     model=glm::rotate(model,glm::radians(-90.0f),glm::vec3(1.0f,0.0f,0.0f));
-    model=glm::rotate(model,(float)glm::radians(gameTime),glm::vec3(0.0652778f*sin(gameTime/(365.0f)),0.0f,-1.0f));
+    model=glm::rotate(model,(float)glm::radians(gameTime),glm::vec3(0.0f,0.0f,-1.0f));
     model=glm::scale(model,glm::vec3(10.0));
     shader.setMat4("model", model);
     glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, nullptr);
