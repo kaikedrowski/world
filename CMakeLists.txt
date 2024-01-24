@@ -1,4 +1,4 @@
-cmake_minimum_required( VERSION 3.1 )
+cmake_minimum_required( VERSION 3.10 )
 
 project( world )
 
@@ -22,8 +22,13 @@ set( SIMULATOR-SRC
      main.cpp
      utils.h
      )
-     
-add_executable( world WIN32 ${SIMULATOR-SRC} )
+
+if(WIN32)
+    add_executable( world WIN32 ${SIMULATOR-SRC} )
+else()
+    add_executable( world MACOSX_BUNDLE ${SIMULATOR-SRC} )
+endif()
+
 target_link_libraries( world ${OPENGL_LIBRARIES} glfw )
 target_link_libraries( world glad )
 target_link_libraries( world glm )
@@ -33,4 +38,7 @@ if( MSVC )
     else()
         set_property( DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT world )
     endif()
+else()
+    set(CMAKE_CXX_FLAGS "-std=c++0x")
+    set(CMAKE_CXX_STANDARD 11)
 endif()
