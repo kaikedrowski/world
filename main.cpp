@@ -143,7 +143,7 @@ int main(void)
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
 
-    GLFWwindow *window = glfwCreateWindow(screenWidth, screenHeight, "Graphics Simulator", NULL, NULL);
+    GLFWwindow *window = glfwCreateWindow(screenWidth, screenHeight, "Graphics Simulation", NULL, NULL);
     if (!window)
     {
         glfwTerminate();
@@ -447,6 +447,9 @@ int main(void)
     hdrShader.setInt("hdrBuffer", 0);
 
     cameraView = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+
+    glfwFocusWindow(window);
+    framebuffer_size_callback(window, screenWidth * 2, screenHeight * 2);
 
     while (!glfwWindowShouldClose(window))
     {
