@@ -26,20 +26,16 @@ bool guitext = true;
 bool hdr = true;
 float exposure = 2.2f;
 int screenWidth = 960, screenHeight = 540;
-bool shadows = true;
-const unsigned int SHADOW_WIDTH = 4096, SHADOW_HEIGHT = 4096;
-bool debugDepth = false;
-float debug_near_plane = 50.0f, debug_far_plane = 200.0f;
 bool faceculling = true;
 bool wireframe = false;
+int verticesiter = 128;
 
 /* ---------- */
 
 unsigned int colorBuffer, rboDepth;
 
-void renderWorld(const Shader &mainShader, const Shader &lightShader, const Shader &debugDepthQuad, const Shader &skyboxShader);
+void renderWorld(const Shader &mainShader, const Shader &lightShader, const Shader &skyboxShader);
 void renderScene(const Shader &shader);
-void renderShadows(const Shader &simpleDepthShader);
 void renderQuad();
 
 glm::vec3 cubePositions[0];
@@ -176,10 +172,8 @@ int main(void)
     glEnable(GL_DEPTH_TEST);
     // glEnable(GL_MULTISAMPLE);
 
-    Shader mainShader("main.vert", "main.frag");
-    Shader lightShader("main.vert", "light.frag");
-    Shader simpleDepthShader("shadow_mapping_depth.vert", "shadow_mapping_depth.frag");
-    Shader debugDepthQuad("debug_quad.vert", "debug_quad_depth.frag");
+    Shader mainShader("main.vert", "main.frag", nullptr, "tessellation.tesc", "tessellation.tese");
+    Shader lightShader("light.vert", "light.frag");
     Shader hdrShader("hdr.vert", "hdr.frag");
     Shader skyboxShader("skybox.vert", "skybox.frag");
 
@@ -206,6 +200,9 @@ int main(void)
         Logger("Framebuffer not complete: " + std::to_string(fboStatus));
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+    // set number of vertices per patch (tessellation)
+    glPatchParameteri(GL_PATCH_VERTICES, 3);
+
     // load height map texture
     stbi_set_flip_vertically_on_load(true);
     int hwidth, hheight, nChannels;
@@ -222,16 +219,23 @@ int main(void)
         Logger("Heightmap Texture failed to load");
         stbi_image_free(data);
     }
+    else
+    {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, hwidth, hheight, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+
+        mainShader.setInt("heightMap", 0);
+        Logger("Loaded heightmap of size " + std::to_string(hheight) + " x " + std::to_string(hwidth));
+    }
 
     // world vertices
     Logger("Generating Vertices");
-    float iter = 1000;
     int loops = 0;
     for (int i = 0; i < 6; i++)
     {
-        for (float j = 0; j < iter; j++)
+        for (float j = 0; j < verticesiter; j++)
         {
-            for (float k = 0; k < iter; k++)
+            for (float k = 0; k < verticesiter; k++)
             {
                 int index = 4 * loops;
                 for (int l = 0; l < 4; l++)
@@ -240,21 +244,21 @@ int main(void)
                     float dx, dy, dz;
                     if (i < 2)
                     {
-                        x = cubevertices[i * 32 + 8 * l] / iter - (1.0f - 1.0f / iter) + j * 2 / iter;
-                        y = cubevertices[i * 32 + 1 + 8 * l] / iter - (1.0f - 1.0f / iter) + k * 2 / iter;
+                        x = cubevertices[i * 32 + 8 * l] / verticesiter - (1.0f - 1.0f / verticesiter) + j * 2 / verticesiter;
+                        y = cubevertices[i * 32 + 1 + 8 * l] / verticesiter - (1.0f - 1.0f / verticesiter) + k * 2 / verticesiter;
                         z = cubevertices[i * 32 + 2 + 8 * l];
                     }
                     else if (i < 4)
                     {
                         x = cubevertices[i * 32 + 8 * l];
-                        y = cubevertices[i * 32 + 1 + 8 * l] / iter - (1.0f - 1.0f / iter) + j * 2 / iter;
-                        z = cubevertices[i * 32 + 2 + 8 * l] / iter - (1.0f - 1.0f / iter) + k * 2 / iter;
+                        y = cubevertices[i * 32 + 1 + 8 * l] / verticesiter - (1.0f - 1.0f / verticesiter) + j * 2 / verticesiter;
+                        z = cubevertices[i * 32 + 2 + 8 * l] / verticesiter - (1.0f - 1.0f / verticesiter) + k * 2 / verticesiter;
                     }
                     else
                     {
-                        x = cubevertices[i * 32 + 8 * l] / iter - (1.0f - 1.0f / iter) + j * 2 / iter;
+                        x = cubevertices[i * 32 + 8 * l] / verticesiter - (1.0f - 1.0f / verticesiter) + j * 2 / verticesiter;
                         y = cubevertices[i * 32 + 1 + 8 * l];
-                        z = cubevertices[i * 32 + 2 + 8 * l] / iter - (1.0f - 1.0f / iter) + k * 2 / iter;
+                        z = cubevertices[i * 32 + 2 + 8 * l] / verticesiter - (1.0f - 1.0f / verticesiter) + k * 2 / verticesiter;
                     }
                     dx = x * sqrtf(1.0 - (y * y / 2.0) - (z * z / 2.0) + (y * y * z * z / 3.0));
                     dy = y * sqrtf(1.0 - (z * z / 2.0) - (x * x / 2.0) + (z * z * x * x / 3.0));
@@ -262,6 +266,7 @@ int main(void)
 
                     glm::vec2 texcoords = glm::vec2((atan2f(dy, dx) / M_PI + 1.0) * 0.5, (asinf(dz) / M_PI + 0.5));
 
+                    /*
                     int pix = (int)(((texcoords.x * hwidth)) + hwidth * ((int)(texcoords.y * (hheight - 1))));
                     pix *= nChannels;
                     unsigned char *texel = data + pix;
@@ -269,6 +274,7 @@ int main(void)
                     dx *= disp;
                     dy *= disp;
                     dz *= disp;
+                    */
 
                     vertices.insert(
                         vertices.end(),
@@ -319,6 +325,9 @@ int main(void)
         }
     }
     stbi_image_free(data);
+
+    Logger("Loaded " + std::to_string(verticesiter * verticesiter) + " patches of 4 control points each");
+    Logger("Processing " + std::to_string(verticesiter * verticesiter * 4) + " vertices in vertex shader");
 
     // cubes
     GLuint VBO;
@@ -413,36 +422,11 @@ int main(void)
 
     fontTexture = loadTexture("../font/bitmapfont.bmp", GL_NEAREST_MIPMAP_NEAREST, GL_NEAREST);
 
-    // configure depth map FBO
-    glGenFramebuffers(1, &depthMapFBO);
-    // create depth texture
-    glGenTextures(1, &depthMap);
-    glBindTexture(GL_TEXTURE_2D, depthMap);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    float borderColor[] = {1.0, 1.0, 1.0, 1.0};
-    glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
-    // attach depth texture as FBO's depth buffer
-    glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
-    glDrawBuffer(GL_NONE);
-    glReadBuffer(GL_NONE);
-
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindVertexArray(0);
-
     // shader configuration
     mainShader.use();
     mainShader.setInt("material.diffuse", 0);
     mainShader.setInt("material.specular", 1);
-    mainShader.setInt("shadowMap", 2);
     mainShader.setInt("material.normal", 3);
-    debugDepthQuad.use();
-    debugDepthQuad.setInt("depthMap", 0);
     hdrShader.use();
     hdrShader.setInt("hdrBuffer", 0);
 
@@ -467,16 +451,11 @@ int main(void)
         glfwGetFramebufferSize(window, &screenWidth, &screenHeight);
         ratio = screenWidth / (float)screenHeight;
 
-        if (shadows)
-        {
-            renderShadows(simpleDepthShader);
-        }
-
         // 1. render scene into floating point framebuffer
         // -----------------------------------------------
         glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
 
-        renderWorld(mainShader, lightShader, debugDepthQuad, skyboxShader);
+        renderWorld(mainShader, lightShader, skyboxShader);
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
@@ -506,7 +485,7 @@ int main(void)
     exit(EXIT_SUCCESS);
 }
 
-void renderWorld(const Shader &mainShader, const Shader &lightShader, const Shader &debugDepthQuad, const Shader &skyboxShader)
+void renderWorld(const Shader &mainShader, const Shader &lightShader, const Shader &skyboxShader)
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -517,9 +496,8 @@ void renderWorld(const Shader &mainShader, const Shader &lightShader, const Shad
     mainShader.setVec3("light.ambient", 0.05, 0.05, 0.05);
     mainShader.setVec3("light.diffuse", 0.6, 0.55, 0.5);
     mainShader.setVec3("light.specular", 0.5, 0.5, 0.5);
-    // light space matrix for shadows
+    // light space for shadows
     mainShader.setVec3("lightPos", lightPos);
-    mainShader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
 
     // bind diffuse map
     glActiveTexture(GL_TEXTURE0);
@@ -527,9 +505,6 @@ void renderWorld(const Shader &mainShader, const Shader &lightShader, const Shad
     // bind specular map
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, specularMap);
-    // bind depth map
-    glActiveTexture(GL_TEXTURE2);
-    glBindTexture(GL_TEXTURE_2D, depthMap);
     // bind normal map
     glActiveTexture(GL_TEXTURE3);
     glBindTexture(GL_TEXTURE_2D, normalMap);
@@ -566,7 +541,7 @@ void renderWorld(const Shader &mainShader, const Shader &lightShader, const Shad
     lightShader.setMat4("projection", p);
     lightShader.setMat4("view", v);
     lightShader.setVec3("circleCenter", lightPos);
-    float circleRadius = 7.0f;
+    float circleRadius = 3.0f;
     lightShader.setFloat("circleRadius", circleRadius);
     glBindVertexArray(lightVAO);
     glm::mat4 model = glm::mat4(1.0f);
@@ -578,18 +553,6 @@ void renderWorld(const Shader &mainShader, const Shader &lightShader, const Shad
     glDisable(GL_BLEND);
     if (faceculling)
         glEnable(GL_CULL_FACE);
-
-    // render Depth map to quad for visual debugging
-    // ---------------------------------------------
-    if (debugDepth)
-    {
-        debugDepthQuad.use();
-        debugDepthQuad.setFloat("near_plane", debug_near_plane);
-        debugDepthQuad.setFloat("far_plane", debug_far_plane);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, depthMap);
-        renderQuad();
-    }
 }
 
 double prev_gameTime = 0.0;
@@ -613,31 +576,7 @@ void renderScene(const Shader &shader)
     model = glm::rotate(model, (float)glm::radians(gameTime), glm::vec3(0.0f, 0.0f, -1.0f));
     model = glm::scale(model, glm::vec3(10.0));
     shader.setMat4("model", model);
-    glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, nullptr);
-}
-
-void renderShadows(const Shader &simpleDepthShader)
-{
-    glm::vec3 center(0.0f, 0.0f, 0.0f);
-    glm::vec3 up(0.0f, 1.0f, 0.0f);
-    // render depth of scene to texture from the light's perspective
-    lightProjection = glm::ortho(-20.0f, 20.0f, -20.0f, 20.0f, debug_near_plane, debug_far_plane);
-    lightView = glm::lookAt(lightPos, center, up);
-    lightSpaceMatrix = lightProjection * lightView;
-    // render scene from light's point of view
-    simpleDepthShader.use();
-    simpleDepthShader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
-
-    glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
-    glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
-    glClear(GL_DEPTH_BUFFER_BIT);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, diffuseMap);
-    renderScene(simpleDepthShader);
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-    // reset viewport
-    glViewport(0, 0, screenWidth, screenHeight);
+    glDrawElements(GL_PATCHES, indices.size(), GL_UNSIGNED_INT, nullptr);
 }
 
 // renderQuad() renders a 1x1 XY quad in NDC

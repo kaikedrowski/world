@@ -1,5 +1,7 @@
-#version 330 core
+#version 410 core
 out vec4 FragColor;
+
+in float Height;
 
 struct Material {
     sampler2D diffuse;
@@ -14,8 +16,8 @@ struct Light {
     vec3 specular;
 };
 
-in vec3 FragPos;
-in vec3 Normal;
+smooth in vec3 FragPos;
+smooth in vec3 Normal;
 in vec2 TexCoords;
 in vec4 FragPosLightSpace;
 
@@ -26,7 +28,7 @@ uniform Light light;
 uniform sampler2D shadowMap;
 uniform vec3 lightPos;
 
-float ShadowCalculation(vec4 fragPosLightSpace)
+/*float ShadowCalculation(vec4 fragPosLightSpace)
 {
     // perform perspective divide
     vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
@@ -61,7 +63,7 @@ float ShadowCalculation(vec4 fragPosLightSpace)
         shadow = 0.0;
         
     return shadow;
-}
+}*/
 
 void main()
 {
@@ -81,7 +83,7 @@ void main()
     spec = pow(max(dot(normalize(Normal), halfwayDir), 0.0), 64.0);
     vec3 specular = spec * light.specular * vec3(texture(material.specular,TexCoords));
     // calculate shadow
-    float shadow = ShadowCalculation(FragPosLightSpace);                      
+    //float shadow = ShadowCalculation(FragPosLightSpace);                      
     vec3 lighting = (ambient + (1.0) * (diffuse + specular));    
     
     FragColor = vec4(lighting, 1.0);
